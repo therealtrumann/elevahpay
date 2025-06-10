@@ -11,6 +11,8 @@ export interface Product {
   installments: number;
   image_url?: string;
   is_recurring: boolean;
+  pix_automatic: boolean;
+  recurring_card: boolean;
   created_at: string;
   user_id: string;
 }
