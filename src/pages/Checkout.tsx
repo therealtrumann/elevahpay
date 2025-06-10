@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { CreditCard, Smartphone, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Checkout = () => {
   const { productId } = useParams();
@@ -15,19 +16,38 @@ const Checkout = () => {
   const theme = searchParams.get('theme') || 'white';
   const [paymentMethod, setPaymentMethod] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Mock product data - in a real app, this would come from an API
-  const product = {
-    id: productId,
-    name: "Curso de Marketing Digital",
-    description: "Aprenda as estratégias mais eficazes do marketing digital",
-    price: 297.00,
-    image: "/placeholder.svg",
-    methods: ["pix", "card"]
-  };
-
   const isDarkTheme = theme === 'black';
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!productId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', productId)
+          .single();
+
+        if (error) throw error;
+        setProduct(data);
+      } catch (error: any) {
+        toast({
+          title: "Erro",
+          description: "Produto não encontrado.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [productId]);
 
   const handlePurchase = () => {
     if (!paymentMethod) {
@@ -51,6 +71,25 @@ const Checkout = () => {
     }, 3000);
   };
 
+  if (loading) {
+    return (
+      <div className={`min-h-screen ${isDarkTheme ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className={`min-h-screen ${isDarkTheme ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} flex items-center justify-center`}>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Produto não encontrado</h1>
+          <p className="text-muted-foreground">O produto solicitado não existe ou foi removido.</p>
+        </div>
+      </div>
+    );
+  }
+
   const containerClass = isDarkTheme 
     ? "min-h-screen bg-gray-900 text-white" 
     : "min-h-screen bg-gray-50 text-gray-900";
@@ -71,16 +110,47 @@ const Checkout = () => {
         <Card className={`mb-6 ${cardClass}`}>
           <CardContent className="p-6">
             <div className="text-center mb-4">
-              <div className={`w-24 h-24 mx-auto ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg mb-4 flex items-center justify-center`}>
-                <Package className={`h-12 w-12 ${isDarkTheme ? 'text-gray-400' : 'text-gray-400'}`} />
-              </div>
+              {product.image_url ? (
+                <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-full">
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // If image fails to load, show fallback
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  <div 
+                    className={`w-full h-full ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-200'} rounded-full items-center justify-center`}
+                    style={{ display: 'none' }}
+                  >
+                    <Package className={`h-12 w-12 ${isDarkTheme ? 'text-gray-400' : 'text-gray-400'}`} />
+                  </div>
+                </div>
+              ) : (
+                <div className={`w-24 h-24 mx-auto ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-200'} rounded-full mb-4 flex items-center justify-center`}>
+                  <Package className={`h-12 w-12 ${isDarkTheme ? 'text-gray-400' : 'text-gray-400'}`} />
+                </div>
+              )}
+              
               <h1 className={`text-xl font-bold mb-2 ${textClass}`}>{product.name}</h1>
-              <p className={`text-sm ${mutedTextClass} mb-4`}>
-                {product.description}
-              </p>
+              {product.description && (
+                <p className={`text-sm ${mutedTextClass} mb-4`}>
+                  {product.description}
+                </p>
+              )}
               <div className="text-3xl font-bold text-green-500">
-                R$ {product.price.toFixed(2).replace('.', ',')}
+                R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}
               </div>
+              {product.installments > 1 && (
+                <p className={`text-sm ${mutedTextClass} mt-2`}>
+                  Em até {product.installments}x sem juros
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -92,35 +162,31 @@ const Checkout = () => {
           </CardHeader>
           <CardContent>
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              {product.methods.includes("pix") && (
-                <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
-                  <RadioGroupItem value="pix" id="pix" />
-                  <Smartphone className="h-5 w-5 text-green-500" />
-                  <Label htmlFor="pix" className={`flex-1 cursor-pointer ${textClass}`}>
-                    <div>
-                      <p className="font-medium">PIX</p>
-                      <p className={`text-sm ${mutedTextClass}`}>
-                        Aprovação instantânea
-                      </p>
-                    </div>
-                  </Label>
-                </div>
-              )}
+              <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
+                <RadioGroupItem value="pix" id="pix" />
+                <Smartphone className="h-5 w-5 text-green-500" />
+                <Label htmlFor="pix" className={`flex-1 cursor-pointer ${textClass}`}>
+                  <div>
+                    <p className="font-medium">PIX</p>
+                    <p className={`text-sm ${mutedTextClass}`}>
+                      Aprovação instantânea
+                    </p>
+                  </div>
+                </Label>
+              </div>
 
-              {product.methods.includes("card") && (
-                <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
-                  <RadioGroupItem value="card" id="card" />
-                  <CreditCard className="h-5 w-5 text-blue-500" />
-                  <Label htmlFor="card" className={`flex-1 cursor-pointer ${textClass}`}>
-                    <div>
-                      <p className="font-medium">Cartão de Crédito</p>
-                      <p className={`text-sm ${mutedTextClass}`}>
-                        Parcelamento disponível
-                      </p>
-                    </div>
-                  </Label>
-                </div>
-              )}
+              <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
+                <RadioGroupItem value="card" id="card" />
+                <CreditCard className="h-5 w-5 text-blue-500" />
+                <Label htmlFor="card" className={`flex-1 cursor-pointer ${textClass}`}>
+                  <div>
+                    <p className="font-medium">Cartão de Crédito</p>
+                    <p className={`text-sm ${mutedTextClass}`}>
+                      Parcelamento disponível
+                    </p>
+                  </div>
+                </Label>
+              </div>
             </RadioGroup>
 
             {paymentMethod === "card" && (
@@ -153,7 +219,7 @@ const Checkout = () => {
           <CardContent className="p-6">
             <div className={`flex justify-between items-center mb-4 ${textClass}`}>
               <span>Subtotal:</span>
-              <span>R$ {product.price.toFixed(2).replace('.', ',')}</span>
+              <span>R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className={`flex justify-between items-center mb-4 pb-4 border-b ${borderClass} ${textClass}`}>
               <span>Taxas:</span>
@@ -161,7 +227,7 @@ const Checkout = () => {
             </div>
             <div className={`flex justify-between items-center text-lg font-bold ${textClass}`}>
               <span>Total:</span>
-              <span className="text-green-500">R$ {product.price.toFixed(2).replace('.', ',')}</span>
+              <span className="text-green-500">R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
           </CardContent>
         </Card>
