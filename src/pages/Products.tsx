@@ -10,7 +10,7 @@ import { DeleteProductModal } from "@/components/DeleteProductModal";
 import { AuthModal } from "@/components/AuthModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useProducts, useStartCheckout } from "@/hooks/useProducts";
+import { useProducts } from "@/hooks/useProducts";
 import { useTransactions } from "@/hooks/useTransactions";
 import {
   DropdownMenu,
@@ -29,7 +29,6 @@ const Products = () => {
   const { user } = useAuth();
   const { data: products = [], isLoading } = useProducts();
   const { data: transactions = [] } = useTransactions();
-  const startCheckout = useStartCheckout();
 
   if (!user) {
     return (
@@ -60,10 +59,6 @@ const Products = () => {
       title: "Link copiado!",
       description: `Link de checkout (${theme}) copiado para a área de transferência.`,
     });
-  };
-
-  const handleCheckout = (productId: string) => {
-    startCheckout.mutate(productId);
   };
 
   const hasProductSales = (productId: string) => {
@@ -199,7 +194,7 @@ const Products = () => {
                   </div>
                 </div>
 
-                <div className="flex space-x-2 mb-3">
+                <div className="flex space-x-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="flex-1">
@@ -222,14 +217,6 @@ const Products = () => {
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-
-                <Button 
-                  onClick={() => handleCheckout(product.id)}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={startCheckout.isPending}
-                >
-                  {startCheckout.isPending ? "Processando..." : "Checkout"}
-                </Button>
               </CardContent>
             </Card>
           ))}

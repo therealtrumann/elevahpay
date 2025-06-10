@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,8 +45,8 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
         description: product.description || "",
         price: (product.price_cents / 100).toString(),
         installments: product.installments.toString(),
-        pixAutomatic: true, // Simplified for now
-        recurringCard: product.is_recurring,
+        pixAutomatic: product.pix_automatic,
+        recurringCard: product.recurring_card,
       });
     }
   }, [product]);
@@ -69,6 +68,8 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
         price_cents: Math.round(parseFloat(productData.price) * 100),
         installments: parseInt(productData.installments),
         is_recurring: productData.recurringCard,
+        pix_automatic: productData.pixAutomatic,
+        recurring_card: productData.recurringCard,
       });
 
       onOpenChange(false);

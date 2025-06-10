@@ -28,6 +28,7 @@ const Checkout = () => {
       if (!productId) return;
 
       try {
+        console.log('Fetching product with ID:', productId);
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -35,6 +36,8 @@ const Checkout = () => {
           .single();
 
         if (error) throw error;
+        
+        console.log('Product data fetched:', data);
         setProduct(data);
 
         // Determine available payment methods based on product settings
@@ -42,6 +45,7 @@ const Checkout = () => {
         if (data.pix_automatic) methods.push('pix');
         if (data.recurring_card) methods.push('card');
         
+        console.log('Available payment methods:', methods);
         setAvailablePaymentMethods(methods);
         
         // Auto-select the first available method
@@ -49,6 +53,7 @@ const Checkout = () => {
           setPaymentMethod(methods[0]);
         }
       } catch (error: any) {
+        console.error('Error fetching product:', error);
         toast({
           title: "Erro",
           description: "Produto não encontrado.",
