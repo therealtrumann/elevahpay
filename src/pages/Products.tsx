@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Plus, Copy, ExternalLink, Package, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -138,7 +137,29 @@ const Products = () => {
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-3">
                   <div className="aspect-video bg-muted rounded-lg flex items-center justify-center flex-1 mr-3">
-                    <Package className="h-12 w-12 text-muted-foreground" />
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          // If image fails to load, show fallback
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ display: product.image_url ? 'none' : 'flex' }}
+                    >
+                      <div className="text-center">
+                        <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">Sem imagem</p>
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-col space-y-2">
                     <Button

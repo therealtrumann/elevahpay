@@ -18,6 +18,7 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<string[]>([]);
   const { toast } = useToast();
 
   const isDarkTheme = theme === 'black';
@@ -35,6 +36,18 @@ const Checkout = () => {
 
         if (error) throw error;
         setProduct(data);
+
+        // Determine available payment methods based on product settings
+        const methods: string[] = [];
+        if (data.pix_automatic) methods.push('pix');
+        if (data.recurring_card) methods.push('card');
+        
+        setAvailablePaymentMethods(methods);
+        
+        // Auto-select the first available method
+        if (methods.length > 0) {
+          setPaymentMethod(methods[0]);
+        }
       } catch (error: any) {
         toast({
           title: "Erro",
@@ -155,64 +168,70 @@ const Checkout = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Method Section */}
-        <Card className={`mb-6 ${cardClass}`}>
-          <CardHeader>
-            <CardTitle className={`text-lg ${textClass}`}>Método de Pagamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
-                <RadioGroupItem value="pix" id="pix" />
-                <Smartphone className="h-5 w-5 text-green-500" />
-                <Label htmlFor="pix" className={`flex-1 cursor-pointer ${textClass}`}>
-                  <div>
-                    <p className="font-medium">PIX</p>
-                    <p className={`text-sm ${mutedTextClass}`}>
-                      Aprovação instantânea
-                    </p>
+        {/* Payment Method Section - Only show if there are available methods */}
+        {availablePaymentMethods.length > 0 && (
+          <Card className={`mb-6 ${cardClass}`}>
+            <CardHeader>
+              <CardTitle className={`text-lg ${textClass}`}>Método de Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                {availablePaymentMethods.includes('pix') && (
+                  <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
+                    <RadioGroupItem value="pix" id="pix" />
+                    <Smartphone className="h-5 w-5 text-green-500" />
+                    <Label htmlFor="pix" className={`flex-1 cursor-pointer ${textClass}`}>
+                      <div>
+                        <p className="font-medium">PIX</p>
+                        <p className={`text-sm ${mutedTextClass}`}>
+                          Aprovação instantânea
+                        </p>
+                      </div>
+                    </Label>
                   </div>
-                </Label>
-              </div>
+                )}
 
-              <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
-                <RadioGroupItem value="card" id="card" />
-                <CreditCard className="h-5 w-5 text-blue-500" />
-                <Label htmlFor="card" className={`flex-1 cursor-pointer ${textClass}`}>
-                  <div>
-                    <p className="font-medium">Cartão de Crédito</p>
-                    <p className={`text-sm ${mutedTextClass}`}>
-                      Parcelamento disponível
-                    </p>
+                {availablePaymentMethods.includes('card') && (
+                  <div className={`flex items-center space-x-3 p-4 border ${borderClass} rounded-lg ${hoverClass}`}>
+                    <RadioGroupItem value="card" id="card" />
+                    <CreditCard className="h-5 w-5 text-blue-500" />
+                    <Label htmlFor="card" className={`flex-1 cursor-pointer ${textClass}`}>
+                      <div>
+                        <p className="font-medium">Cartão de Crédito</p>
+                        <p className={`text-sm ${mutedTextClass}`}>
+                          Parcelamento disponível
+                        </p>
+                      </div>
+                    </Label>
                   </div>
-                </Label>
-              </div>
-            </RadioGroup>
+                )}
+              </RadioGroup>
 
-            {paymentMethod === "card" && (
-              <div className="mt-4 space-y-3">
-                <Input 
-                  placeholder="Número do cartão" 
-                  className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
-                />
-                <div className="grid grid-cols-2 gap-3">
+              {paymentMethod === "card" && (
+                <div className="mt-4 space-y-3">
                   <Input 
-                    placeholder="MM/AA" 
+                    placeholder="Número do cartão" 
                     className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
                   />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input 
+                      placeholder="MM/AA" 
+                      className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+                    />
+                    <Input 
+                      placeholder="CVV" 
+                      className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+                    />
+                  </div>
                   <Input 
-                    placeholder="CVV" 
+                    placeholder="Nome no cartão" 
                     className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
                   />
                 </div>
-                <Input 
-                  placeholder="Nome no cartão" 
-                  className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Section */}
         <Card className={`mb-6 ${cardClass}`}>
@@ -232,24 +251,30 @@ const Checkout = () => {
           </CardContent>
         </Card>
 
-        {/* Purchase Button */}
-        <Button 
-          onClick={handlePurchase}
-          disabled={isProcessing}
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
-        >
-          {isProcessing ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Processando...
-            </div>
-          ) : (
-            <>
-              <CheckCircle className="h-5 w-5 mr-2" />
-              Finalizar Compra
-            </>
-          )}
-        </Button>
+        {/* Purchase Button - Only show if payment methods are available */}
+        {availablePaymentMethods.length > 0 ? (
+          <Button 
+            onClick={handlePurchase}
+            disabled={isProcessing}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
+          >
+            {isProcessing ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Processando...
+              </div>
+            ) : (
+              <>
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Finalizar Compra
+              </>
+            )}
+          </Button>
+        ) : (
+          <div className={`text-center p-4 ${textClass}`}>
+            <p>Nenhum método de pagamento disponível para este produto.</p>
+          </div>
+        )}
 
         {/* Security Notice */}
         <div className={`text-center mt-6 text-sm ${mutedTextClass}`}>

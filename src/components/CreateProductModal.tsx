@@ -123,7 +123,7 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
     if (!productData.pixAutomatic && !productData.recurringCard) {
       toast({
         title: "Erro",
-        description: "Selecione pelo menos um método de pagamento.",
+        description: "Selecione pelo menos uma forma de pagamento.",
         variant: "destructive",
       });
       return;
@@ -155,6 +155,8 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
         installments: parseInt(productData.installments),
         is_recurring: productData.recurringCard,
         image_url: imageUrl,
+        pix_automatic: productData.pixAutomatic,
+        recurring_card: productData.recurringCard,
       });
 
       // Reset form
@@ -294,10 +296,15 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
                   onCheckedChange={(checked) => setProductData({ ...productData, recurringCard: checked as boolean })}
                 />
                 <Label htmlFor="card" className="cursor-pointer">
-                  Cartão Recorrente
+                  Cartão de Crédito
                 </Label>
               </div>
             </div>
+            {!productData.pixAutomatic && !productData.recurringCard && (
+              <p className="text-sm text-destructive mt-2">
+                Selecione pelo menos uma forma de pagamento.
+              </p>
+            )}
           </div>
 
           <div className="flex space-x-2 pt-4">
@@ -307,7 +314,7 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
             <Button 
               onClick={handleCreate} 
               className="flex-1"
-              disabled={createProduct.isPending || isUploading}
+              disabled={createProduct.isPending || isUploading || (!productData.pixAutomatic && !productData.recurringCard)}
             >
               {isUploading ? "Fazendo upload..." : createProduct.isPending ? "Criando..." : "Criar Produto"}
             </Button>

@@ -32,6 +32,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<SignUp />} />
             <Route path="/confirmado" element={<Confirmado />} />
+            <Route path="/checkout/:productId" element={<Checkout />} />
             
             {/* Protected routes */}
             <Route path="/*" element={
@@ -45,7 +46,6 @@ const App = () => (
                         <Route path="/products" element={<Products />} />
                         <Route path="/sales" element={<Sales />} />
                         <Route path="/finance" element={<Finance />} />
-                        <Route path="/checkout/:productId" element={<Checkout />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </main>
