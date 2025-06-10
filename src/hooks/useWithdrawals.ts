@@ -33,9 +33,13 @@ export function useCreateWithdrawal() {
 
   return useMutation({
     mutationFn: async (amountCents: number) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .from('withdrawals')
         .insert([{
+          user_id: user.id,
           amount_cents: amountCents,
           status: 'requested'
         }])
