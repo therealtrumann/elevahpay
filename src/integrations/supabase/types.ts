@@ -53,7 +53,9 @@ export type Database = {
           installments: number
           is_recurring: boolean
           name: string
+          pix_automatic: boolean
           price_cents: number
+          recurring_card: boolean
           user_id: string
         }
         Insert: {
@@ -64,7 +66,9 @@ export type Database = {
           installments?: number
           is_recurring?: boolean
           name: string
+          pix_automatic?: boolean
           price_cents: number
+          recurring_card?: boolean
           user_id: string
         }
         Update: {
@@ -75,7 +79,9 @@ export type Database = {
           installments?: number
           is_recurring?: boolean
           name?: string
+          pix_automatic?: boolean
           price_cents?: number
+          recurring_card?: boolean
           user_id?: string
         }
         Relationships: []
