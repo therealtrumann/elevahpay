@@ -1,20 +1,25 @@
 
-import { Home, Package, ShoppingCart, DollarSign } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Calendar, Home, Inbox, Search, Settings, Package, DollarSign, ShoppingCart, LogOut } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-} from "@/components/ui/sidebar";
+  SidebarFooter,
+} from "@/components/ui/sidebar"
 
-const menuItems = [
+// Menu items.
+const items = [
   {
-    title: "Home",
+    title: "Dashboard",
     url: "/",
     icon: Home,
   },
@@ -33,40 +38,43 @@ const menuItems = [
     url: "/finance",
     icon: DollarSign,
   },
-];
+]
 
 export function AppSidebar() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+      navigate("/login");
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarHeader className="p-6">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">EP</span>
-          </div>
-          <span className="font-bold text-xl text-foreground">ElevahPay</span>
-        </div>
-      </SidebarHeader>
+    <Sidebar>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>Elevah Pay</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.url}
-                    className="w-full justify-start"
-                  >
-                    <button
-                      onClick={() => navigate(item.url)}
-                      className="flex items-center space-x-3 w-full text-left"
-                    >
-                      <item.icon className="h-5 w-5" />
+                  <SidebarMenuButton asChild>
+                    <a href={item.url}>
+                      <item.icon />
                       <span>{item.title}</span>
-                    </button>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -74,6 +82,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout}>
+              <LogOut />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
-  );
+  )
 }

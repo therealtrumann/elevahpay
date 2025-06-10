@@ -6,9 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { SaleDetailsModal } from "@/components/SaleDetailsModal";
-import { AuthModal } from "@/components/AuthModal";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import {
   Table,
@@ -21,37 +19,13 @@ import {
 
 const Sales = () => {
   const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [filters, setFilters] = useState({
     approved: false,
     pending: false,
     cancelled: false
   });
   
-  const { user } = useAuth();
   const { data: transactions = [], isLoading } = useTransactions();
-
-  if (!user) {
-    return (
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Vendas</h1>
-                <p className="text-muted-foreground">Faça login para ver suas vendas</p>
-              </div>
-            </div>
-            <Button onClick={() => setShowAuthModal(true)}>
-              Fazer Login
-            </Button>
-          </div>
-        </div>
-        <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
-      </div>
-    );
-  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
