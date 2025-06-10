@@ -18,8 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useCreateProduct } from "@/hooks/useProducts";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateProductModalProps {
   open: boolean;
@@ -36,26 +38,126 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
     recurringCard: false,
   });
   
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const createProduct = useCreateProduct();
+  const { toast } = useToast();
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione apenas arquivos de imagem.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Erro",
+          description: "A imagem deve ter no máximo 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+  };
 
   const handleCreate = async () => {
     if (!productData.name || !productData.price) {
+      toast({
+        title: "Erro",
+        description: "Nome e preço são obrigatórios.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!productData.pixAutomatic && !productData.recurringCard) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um método de pagamento.",
+        variant: "destructive",
+      });
       return;
     }
 
+    setIsUploading(true);
+
     try {
+      let imageUrl = null;
+
+      // Upload image if selected
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+        if (!imageUrl) {
+          toast({
+            title: "Erro",
+            description: "Falha ao fazer upload da imagem.",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+      }
+
       await createProduct.mutateAsync({
         name: productData.name,
         description: productData.description,
         price_cents: Math.round(parseFloat(productData.price) * 100),
         installments: parseInt(productData.installments),
         is_recurring: productData.recurringCard,
+        image_url: imageUrl,
       });
 
+      // Reset form
       setProductData({
         name: "",
         description: "",
@@ -64,9 +166,12 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
         pixAutomatic: false,
         recurringCard: false,
       });
+      removeImage();
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating product:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -100,15 +205,43 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
 
           <div>
             <Label htmlFor="image">Imagem do Produto</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Clique para fazer upload ou arraste a imagem aqui
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                PNG, JPG até 5MB
-              </p>
-            </div>
+            {!previewUrl ? (
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label htmlFor="image-upload" className="cursor-pointer">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Clique para fazer upload ou arraste a imagem aqui
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG até 5MB
+                  </p>
+                </label>
+              </div>
+            ) : (
+              <div className="relative">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={removeImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -174,9 +307,9 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
             <Button 
               onClick={handleCreate} 
               className="flex-1"
-              disabled={createProduct.isPending}
+              disabled={createProduct.isPending || isUploading}
             >
-              {createProduct.isPending ? "Criando..." : "Criar Produto"}
+              {isUploading ? "Fazendo upload..." : createProduct.isPending ? "Criando..." : "Criar Produto"}
             </Button>
           </div>
         </div>
