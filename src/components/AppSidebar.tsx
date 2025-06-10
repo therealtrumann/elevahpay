@@ -44,9 +44,9 @@ export function AppSidebar() {
       <SidebarHeader className="p-6">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">VP</span>
+            <span className="text-primary-foreground font-bold text-sm">EP</span>
           </div>
-          <span className="font-bold text-xl text-foreground">ValidaPix</span>
+          <span className="font-bold text-xl text-foreground">ElevahPay</span>
         </div>
       </SidebarHeader>
       <SidebarContent>

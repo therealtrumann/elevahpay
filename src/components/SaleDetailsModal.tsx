@@ -39,6 +39,13 @@ export function SaleDetailsModal({ sale, open, onOpenChange }: SaleDetailsModalP
             <p className="text-foreground">{sale.buyer.phone}</p>
           </div>
 
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">Parcela</Label>
+            <p className="text-foreground font-medium">
+              Parcela {sale.installment.current} de {sale.installment.total}
+            </p>
+          </div>
+
           <Separator />
 
           <div>

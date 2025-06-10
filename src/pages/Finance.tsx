@@ -13,7 +13,6 @@ const Finance = () => {
     totalBalance: 12450.00,
     availableBalance: 8750.00,
     pendingBalance: 3700.00,
-    totalWithdrawn: 25800.00,
   };
 
   return (
@@ -37,7 +36,7 @@ const Finance = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-blue-800">
@@ -85,23 +84,6 @@ const Finance = () => {
               </div>
               <p className="text-xs text-yellow-700 mt-1">
                 Aguardando liberação
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-purple-800">
-                Total Sacado
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-900">
-                R$ {financialData.totalWithdrawn.toFixed(2).replace('.', ',')}
-              </div>
-              <p className="text-xs text-purple-700 mt-1">
-                Histórico total
               </p>
             </CardContent>
           </Card>

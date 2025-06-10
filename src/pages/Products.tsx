@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Plus, Copy, ExternalLink, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ const Products = () => {
       name: "Curso de Marketing Digital",
       description: "Aprenda as estratégias mais eficazes do marketing digital",
       price: 297.00,
-      type: "único",
+      installments: 1,
       image: "/placeholder.svg",
       methods: ["Pix Automático", "Cartão"]
     },
@@ -32,7 +33,7 @@ const Products = () => {
       name: "Mentoria Mensal",
       description: "Acompanhamento personalizado para seu negócio",
       price: 497.00,
-      type: "recorrente",
+      installments: 12,
       image: "/placeholder.svg",
       methods: ["Cartão"]
     },
@@ -41,7 +42,7 @@ const Products = () => {
       name: "E-book de Vendas",
       description: "Guia completo para aumentar suas vendas",
       price: 47.00,
-      type: "único",
+      installments: 1,
       image: "/placeholder.svg",
       methods: ["Pix Automático"]
     }
@@ -89,8 +90,8 @@ const Products = () => {
                     <p className="text-2xl font-bold text-foreground">
                       R$ {product.price.toFixed(2).replace('.', ',')}
                     </p>
-                    <Badge variant={product.type === "recorrente" ? "default" : "secondary"}>
-                      {product.type}
+                    <Badge variant="secondary">
+                      {product.installments}x parcela{product.installments > 1 ? 's' : ''}
                     </Badge>
                   </div>
                 </div>
