@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Transaction } from "@/hooks/useTransactions";
 
 interface SaleDetailsModalProps {
-  sale: any;
+  sale: Transaction;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -25,47 +26,53 @@ export function SaleDetailsModal({ sale, open, onOpenChange }: SaleDetailsModalP
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium text-muted-foreground">Nome do Comprador</Label>
-            <p className="text-foreground">{sale.buyer.name}</p>
+            <Label className="text-sm font-medium text-muted-foreground">Produto</Label>
+            <p className="text-foreground">{sale.products?.name || 'N/A'}</p>
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-muted-foreground">E-mail</Label>
-            <p className="text-foreground">{sale.buyer.email}</p>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-muted-foreground">Telefone</Label>
-            <p className="text-foreground">{sale.buyer.phone}</p>
+            <Label className="text-sm font-medium text-muted-foreground">Data da Transação</Label>
+            <p className="text-foreground">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</p>
           </div>
 
           <div>
             <Label className="text-sm font-medium text-muted-foreground">Parcela</Label>
             <p className="text-foreground font-medium">
-              Parcela {sale.installment.current} de {sale.installment.total}
+              Parcela {sale.installment_number} de {sale.total_installments}
             </p>
           </div>
 
           <Separator />
 
           <div>
-            <Label className="text-sm font-medium text-muted-foreground">Valor Pago</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Valor Total</Label>
             <p className="text-foreground font-medium">
-              R$ {sale.buyer.paidValue.toFixed(2).replace('.', ',')}
+              R$ {(sale.total_cents / 100).toFixed(2).replace('.', ',')}
             </p>
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-muted-foreground">Taxa (3,99% + R$2)</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Taxa ({sale.fee_percent}% + R${(sale.fee_fixed_cents / 100).toFixed(2)})</Label>
             <p className="text-red-600 font-medium">
-              - R$ {sale.buyer.fee.toFixed(2).replace('.', ',')}
+              - R$ {((sale.total_cents * sale.fee_percent / 100 + sale.fee_fixed_cents) / 100).toFixed(2).replace('.', ',')}
             </p>
           </div>
 
           <div>
             <Label className="text-sm font-medium text-muted-foreground">Valor Líquido Recebido</Label>
             <p className="text-green-600 font-bold text-lg">
-              R$ {sale.netValue.toFixed(2).replace('.', ',')}
+              R$ {(sale.net_cents / 100).toFixed(2).replace('.', ',')}
+            </p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+            <p className={`font-medium ${
+              sale.status === 'approved' ? 'text-green-600' :
+              sale.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {sale.status === 'approved' ? 'Aprovado' :
+               sale.status === 'pending' ? 'Pendente' : 'Cancelado'}
             </p>
           </div>
         </div>

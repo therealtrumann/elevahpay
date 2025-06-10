@@ -19,17 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  installments: number;
-  image: string;
-  methods: string[];
-}
+import { useUpdateProduct, Product } from "@/hooks/useProducts";
 
 interface EditProductModalProps {
   open: boolean;
@@ -46,46 +36,45 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
     pixAutomatic: false,
     recurringCard: false,
   });
-  const { toast } = useToast();
+  
+  const updateProduct = useUpdateProduct();
 
   useEffect(() => {
     if (product) {
       setProductData({
         name: product.name,
-        description: product.description,
-        price: product.price.toString(),
+        description: product.description || "",
+        price: (product.price_cents / 100).toString(),
         installments: product.installments.toString(),
-        pixAutomatic: product.methods.includes("Pix Automático"),
-        recurringCard: product.methods.includes("Cartão"),
+        pixAutomatic: true, // Simplified for now
+        recurringCard: product.is_recurring,
       });
     }
   }, [product]);
 
-  const handleSave = () => {
-    if (!productData.name || !productData.price) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
+  const handleSave = async () => {
+    if (!product || !productData.name || !productData.price) {
       return;
     }
 
     if (!productData.pixAutomatic && !productData.recurringCard) {
-      toast({
-        title: "Erro",
-        description: "Selecione pelo menos um método de pagamento.",
-        variant: "destructive",
-      });
       return;
     }
 
-    toast({
-      title: "Produto atualizado!",
-      description: "As alterações foram salvas com sucesso.",
-    });
+    try {
+      await updateProduct.mutateAsync({
+        id: product.id,
+        name: productData.name,
+        description: productData.description,
+        price_cents: Math.round(parseFloat(productData.price) * 100),
+        installments: parseInt(productData.installments),
+        is_recurring: productData.recurringCard,
+      });
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating product:', error);
+    }
   };
 
   return (
@@ -189,8 +178,12 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Salvar Alterações
+            <Button 
+              onClick={handleSave} 
+              className="flex-1"
+              disabled={updateProduct.isPending}
+            >
+              {updateProduct.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </div>

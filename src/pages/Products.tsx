@@ -8,7 +8,11 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CreateProductModal } from "@/components/CreateProductModal";
 import { EditProductModal } from "@/components/EditProductModal";
 import { DeleteProductModal } from "@/components/DeleteProductModal";
+import { AuthModal } from "@/components/AuthModal";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useProducts, useStartCheckout } from "@/hooks/useProducts";
+import { useTransactions } from "@/hooks/useTransactions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,43 +24,37 @@ const Products = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { data: products = [], isLoading } = useProducts();
+  const { data: transactions = [] } = useTransactions();
+  const startCheckout = useStartCheckout();
 
-  const products = [
-    {
-      id: 1,
-      name: "Curso de Marketing Digital",
-      description: "Aprenda as estratégias mais eficazes do marketing digital",
-      price: 297.00,
-      installments: 1,
-      image: "/placeholder.svg",
-      methods: ["Pix Automático", "Cartão"],
-      hasSales: false // Produto sem vendas, pode ser editado/excluído
-    },
-    {
-      id: 2,
-      name: "Mentoria Mensal",
-      description: "Acompanhamento personalizado para seu negócio",
-      price: 497.00,
-      installments: 12,
-      image: "/placeholder.svg",
-      methods: ["Cartão"],
-      hasSales: true // Produto com vendas, não pode ser editado/excluído
-    },
-    {
-      id: 3,
-      name: "E-book de Vendas",
-      description: "Guia completo para aumentar suas vendas",
-      price: 47.00,
-      installments: 1,
-      image: "/placeholder.svg",
-      methods: ["Pix Automático"],
-      hasSales: false // Produto sem vendas, pode ser editado/excluído
-    }
-  ];
+  if (!user) {
+    return (
+      <div className="flex-1 overflow-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-4">
+              <SidebarTrigger />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
+                <p className="text-muted-foreground">Faça login para gerenciar seus produtos</p>
+              </div>
+            </div>
+            <Button onClick={() => setShowAuthModal(true)}>
+              Fazer Login
+            </Button>
+          </div>
+        </div>
+        <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+      </div>
+    );
+  }
 
-  const copyCheckoutLink = (productId: number, theme: string) => {
+  const copyCheckoutLink = (productId: string, theme: string) => {
     const link = `${window.location.origin}/checkout/${productId}?theme=${theme}`;
     navigator.clipboard.writeText(link);
     toast({
@@ -65,8 +63,16 @@ const Products = () => {
     });
   };
 
-  const handleEdit = (product) => {
-    if (product.hasSales) {
+  const handleCheckout = (productId: string) => {
+    startCheckout.mutate(productId);
+  };
+
+  const hasProductSales = (productId: string) => {
+    return transactions.some(t => t.product_id === productId);
+  };
+
+  const handleEdit = (product: any) => {
+    if (hasProductSales(product.id)) {
       toast({
         title: "Não é possível editar",
         description: "Este produto já possui vendas e não pode ser editado.",
@@ -78,8 +84,8 @@ const Products = () => {
     setShowEditModal(true);
   };
 
-  const handleDelete = (product) => {
-    if (product.hasSales) {
+  const handleDelete = (product: any) => {
+    if (hasProductSales(product.id)) {
       toast({
         title: "Não é possível excluir",
         description: "Este produto já possui vendas e não pode ser excluído.",
@@ -90,6 +96,24 @@ const Products = () => {
     setSelectedProduct(product);
     setShowDeleteModal(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-4">
+              <SidebarTrigger />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
+                <p className="text-muted-foreground">Carregando produtos...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto">
@@ -122,8 +146,8 @@ const Products = () => {
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={() => handleEdit(product)}
-                      disabled={product.hasSales}
-                      title={product.hasSales ? "Produto com vendas não pode ser editado" : "Editar produto"}
+                      disabled={hasProductSales(product.id)}
+                      title={hasProductSales(product.id) ? "Produto com vendas não pode ser editado" : "Editar produto"}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -132,8 +156,8 @@ const Products = () => {
                       size="sm"
                       className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
                       onClick={() => handleDelete(product)}
-                      disabled={product.hasSales}
-                      title={product.hasSales ? "Produto com vendas não pode ser excluído" : "Excluir produto"}
+                      disabled={hasProductSales(product.id)}
+                      title={hasProductSales(product.id) ? "Produto com vendas não pode ser excluído" : "Excluir produto"}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -146,26 +170,15 @@ const Products = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-2xl font-bold text-foreground">
-                      R$ {product.price.toFixed(2).replace('.', ',')}
+                      R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}
                     </p>
                     <Badge variant="secondary">
                       {product.installments}x parcela{product.installments > 1 ? 's' : ''}
                     </Badge>
                   </div>
                 </div>
-                
-                <div className="mb-4">
-                  <p className="text-sm text-muted-foreground mb-2">Métodos aceitos:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {product.methods.map((method) => (
-                      <Badge key={method} variant="outline" className="text-xs">
-                        {method}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 mb-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="flex-1">
@@ -188,6 +201,14 @@ const Products = () => {
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
+
+                <Button 
+                  onClick={() => handleCheckout(product.id)}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={startCheckout.isPending}
+                >
+                  {startCheckout.isPending ? "Processando..." : "Checkout"}
+                </Button>
               </CardContent>
             </Card>
           ))}

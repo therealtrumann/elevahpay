@@ -10,12 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-
-interface Product {
-  id: number;
-  name: string;
-}
+import { useDeleteProduct, Product } from "@/hooks/useProducts";
 
 interface DeleteProductModalProps {
   open: boolean;
@@ -24,14 +19,17 @@ interface DeleteProductModalProps {
 }
 
 export function DeleteProductModal({ open, onOpenChange, product }: DeleteProductModalProps) {
-  const { toast } = useToast();
+  const deleteProduct = useDeleteProduct();
 
-  const handleDelete = () => {
-    toast({
-      title: "Produto excluído!",
-      description: `O produto "${product?.name}" foi excluído com sucesso.`,
-    });
-    onOpenChange(false);
+  const handleDelete = async () => {
+    if (!product) return;
+
+    try {
+      await deleteProduct.mutateAsync(product.id);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
   };
 
   return (
@@ -45,8 +43,12 @@ export function DeleteProductModal({ open, onOpenChange, product }: DeleteProduc
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-            Excluir
+          <AlertDialogAction 
+            onClick={handleDelete} 
+            className="bg-destructive hover:bg-destructive/90"
+            disabled={deleteProduct.isPending}
+          >
+            {deleteProduct.isPending ? "Excluindo..." : "Excluir"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

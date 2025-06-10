@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useCreateProduct } from "@/hooks/useProducts";
 
 interface CreateProductModalProps {
   open: boolean;
@@ -35,41 +35,39 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
     pixAutomatic: false,
     recurringCard: false,
   });
-  const { toast } = useToast();
+  
+  const createProduct = useCreateProduct();
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!productData.name || !productData.price) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (!productData.pixAutomatic && !productData.recurringCard) {
-      toast({
-        title: "Erro",
-        description: "Selecione pelo menos um método de pagamento.",
-        variant: "destructive",
-      });
       return;
     }
 
-    toast({
-      title: "Produto criado!",
-      description: "Seu produto foi criado com sucesso.",
-    });
+    try {
+      await createProduct.mutateAsync({
+        name: productData.name,
+        description: productData.description,
+        price_cents: Math.round(parseFloat(productData.price) * 100),
+        installments: parseInt(productData.installments),
+        is_recurring: productData.recurringCard,
+      });
 
-    setProductData({
-      name: "",
-      description: "",
-      price: "",
-      installments: "1",
-      pixAutomatic: false,
-      recurringCard: false,
-    });
-    onOpenChange(false);
+      setProductData({
+        name: "",
+        description: "",
+        price: "",
+        installments: "1",
+        pixAutomatic: false,
+        recurringCard: false,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating product:', error);
+    }
   };
 
   return (
@@ -173,8 +171,12 @@ export function CreateProductModal({ open, onOpenChange }: CreateProductModalPro
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleCreate} className="flex-1">
-              Criar Produto
+            <Button 
+              onClick={handleCreate} 
+              className="flex-1"
+              disabled={createProduct.isPending}
+            >
+              {createProduct.isPending ? "Criando..." : "Criar Produto"}
             </Button>
           </div>
         </div>

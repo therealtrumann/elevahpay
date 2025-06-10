@@ -9,13 +9,245 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          installments: number
+          is_recurring: boolean
+          name: string
+          price_cents: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          installments?: number
+          is_recurring?: boolean
+          name: string
+          price_cents: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          installments?: number
+          is_recurring?: boolean
+          name?: string
+          price_cents?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          fee_fixed_cents: number
+          fee_percent: number
+          id: string
+          installment_number: number
+          net_cents: number
+          product_id: string
+          status: string
+          total_cents: number
+          total_installments: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          fee_fixed_cents: number
+          fee_percent: number
+          id?: string
+          installment_number: number
+          net_cents: number
+          product_id: string
+          status?: string
+          total_cents: number
+          total_installments: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          fee_fixed_cents?: number
+          fee_percent?: number
+          id?: string
+          installment_number?: number
+          net_cents?: number
+          product_id?: string
+          status?: string
+          total_cents?: number
+          total_installments?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          password_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          password_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          password_hash?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          endpoint: string
+          id: string
+          payload: Json
+          received_at: string | null
+        }
+        Insert: {
+          endpoint: string
+          id?: string
+          payload: Json
+          received_at?: string | null
+        }
+        Update: {
+          endpoint?: string
+          id?: string
+          payload?: Json
+          received_at?: string | null
+        }
+        Relationships: []
+      }
+      withdrawals: {
+        Row: {
+          amount_cents: number
+          id: string
+          processed_at: string | null
+          requested_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_net_amount: {
+        Args: {
+          total_cents: number
+          fee_percent: number
+          fee_fixed_cents: number
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

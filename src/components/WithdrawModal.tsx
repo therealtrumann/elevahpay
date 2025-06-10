@@ -9,55 +9,40 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useCreateWithdrawal } from "@/hooks/useWithdrawals";
 
 interface WithdrawModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  availableBalance: number;
 }
 
-export function WithdrawModal({ open, onOpenChange }: WithdrawModalProps) {
+export function WithdrawModal({ open, onOpenChange, availableBalance }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
-  const { toast } = useToast();
-  const availableBalance = 8750.00;
+  const createWithdrawal = useCreateWithdrawal();
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     const withdrawAmount = parseFloat(amount);
     
     if (!amount || withdrawAmount <= 0) {
-      toast({
-        title: "Erro",
-        description: "Por favor, informe um valor válido.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (withdrawAmount < 50) {
-      toast({
-        title: "Erro",
-        description: "O valor mínimo para saque é R$ 50,00.",
-        variant: "destructive",
-      });
       return;
     }
 
-    if (withdrawAmount > availableBalance) {
-      toast({
-        title: "Erro",
-        description: "Valor superior ao saldo disponível.",
-        variant: "destructive",
-      });
+    if (withdrawAmount * 100 > availableBalance) {
       return;
     }
 
-    toast({
-      title: "Saque solicitado!",
-      description: `Sua solicitação de saque de R$ ${withdrawAmount.toFixed(2).replace('.', ',')} foi enviada.`,
-    });
-
-    setAmount("");
-    onOpenChange(false);
+    try {
+      await createWithdrawal.mutateAsync(Math.round(withdrawAmount * 100));
+      setAmount("");
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating withdrawal:', error);
+    }
   };
 
   return (
@@ -70,7 +55,7 @@ export function WithdrawModal({ open, onOpenChange }: WithdrawModalProps) {
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Saldo disponível</p>
             <p className="text-2xl font-bold text-green-600">
-              R$ {availableBalance.toFixed(2).replace('.', ',')}
+              R$ {(availableBalance / 100).toFixed(2).replace('.', ',')}
             </p>
           </div>
 
@@ -84,7 +69,7 @@ export function WithdrawModal({ open, onOpenChange }: WithdrawModalProps) {
               placeholder="0,00"
               step="0.01"
               min="50"
-              max={availableBalance}
+              max={availableBalance / 100}
             />
             <p className="text-xs text-muted-foreground mt-1">
               Valor mínimo: R$ 50,00
@@ -104,8 +89,12 @@ export function WithdrawModal({ open, onOpenChange }: WithdrawModalProps) {
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleWithdraw} className="flex-1 bg-green-600 hover:bg-green-700">
-              Solicitar Saque
+            <Button 
+              onClick={handleWithdraw} 
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              disabled={createWithdrawal.isPending}
+            >
+              {createWithdrawal.isPending ? "Solicitando..." : "Solicitar Saque"}
             </Button>
           </div>
         </div>
