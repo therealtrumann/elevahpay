@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import QRCode from 'qrcode';
 
 const Checkout = () => {
   const { productId } = useParams();
@@ -26,6 +27,9 @@ const Checkout = () => {
     valor: ""
   });
   const [cobResp, setCobResp] = useState<any>(null);
+  const [locResp, setLocResp] = useState<any>(null);
+  const [recResp, setRecResp] = useState<any>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const { toast } = useToast();
 
   const isDarkTheme = theme === 'black';
@@ -80,6 +84,52 @@ const Checkout = () => {
     fetchProduct();
   }, [productId]);
 
+  const generateRandomString = (length: number = 32) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  const generateQRCode = async (text: string) => {
+    try {
+      const dataUrl = await QRCode.toDataURL(text);
+      setQrCodeDataUrl(dataUrl);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    }
+  };
+
+  const saveToDatabase = async (txid: string, locId: number, idRec: string) => {
+    try {
+      const { error } = await supabase
+        .from('pix_transactions')
+        .insert([{
+          product_id: productId,
+          txid: txid,
+          loc_id: locId,
+          id_rec: idRec,
+          valor: parseFloat(customerData.valor),
+          cpf: customerData.cpf,
+          nome: customerData.nome,
+          email: customerData.email,
+          qr_code: cobResp?.data?.loc?.qrcode || "",
+          status: 'pending'
+        }]);
+
+      if (error) throw error;
+      console.log('Transaction saved to database');
+    } catch (error: any) {
+      console.error('Error saving to database:', error);
+    }
+  };
+
   const handleGeneratePix = async () => {
     if (!customerData.nome || !customerData.email || !customerData.cpf || !customerData.valor) {
       toast({
@@ -93,7 +143,9 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      const response = await fetch('http://localhost:8000/php/create-cob.php', {
+      // Action 1: Create PIX charge
+      console.log('Starting Action 1: Create PIX charge');
+      const cobResponse = await fetch('http://localhost:8000/php/create-cob.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,25 +166,95 @@ const Checkout = () => {
         }),
       });
 
-      if (!response.ok) {
+      if (!cobResponse.ok) {
         throw new Error('Erro ao gerar cobrança PIX');
       }
 
-      const data = await response.json();
-      console.log('PIX cobrança criada:', data);
-      
-      // Save the response as cobResp
-      setCobResp(data);
+      const cobData = await cobResponse.json();
+      console.log('Action 1 completed:', cobData);
+      setCobResp(cobData);
+
+      // Action 2: Create recurring location
+      console.log('Starting Action 2: Create recurring location');
+      const locResponse = await fetch('http://localhost:8000/php/create-locrec.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!locResponse.ok) {
+        throw new Error('Erro ao criar localização recorrente');
+      }
+
+      const locData = await locResponse.json();
+      console.log('Action 2 completed:', locData);
+      setLocResp(locData);
+
+      // Action 3: Create recurrence
+      console.log('Starting Action 3: Create recurrence');
+      const recResponse = await fetch('http://localhost:8000/php/create-rec.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vinculo: {
+            contrato: generateRandomString(),
+            devedor: {
+              cpf: customerData.cpf,
+              nome: customerData.nome
+            },
+            objeto: "Assinatura recorrente de serviços."
+          },
+          calendario: {
+            dataInicial: getTodayDate(),
+            periodicidade: "MENSAL"
+          },
+          valor: {
+            valorRec: customerData.valor
+          },
+          politicaRetentativa: "NAO_PERMITE",
+          loc: locData.data.id,
+          ativacao: {
+            dadosJornada: {
+              txid: cobData.data.txid
+            }
+          }
+        }),
+      });
+
+      if (!recResponse.ok) {
+        throw new Error('Erro ao criar recorrência');
+      }
+
+      const recData = await recResponse.json();
+      console.log('Action 3 completed:', recData);
+      setRecResp(recData);
+
+      // Action 4: Generate and display QR Code
+      if (cobData.data?.loc?.qrcode) {
+        console.log('Action 4: Generating QR Code');
+        await generateQRCode(cobData.data.loc.qrcode);
+      }
+
+      // Save to database
+      await saveToDatabase(
+        cobData.data.txid,
+        locData.data.id,
+        recData.data.idRec
+      );
 
       toast({
         title: "PIX gerado com sucesso!",
-        description: "Sua cobrança PIX foi criada.",
+        description: "Sua cobrança PIX recorrente foi criada.",
       });
     } catch (error: any) {
-      console.error('Erro ao gerar PIX:', error);
+      console.error('Erro no processo PIX:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível gerar a cobrança PIX.",
+        description: error.message || "Não foi possível gerar a cobrança PIX.",
         variant: "destructive",
       });
     } finally {
@@ -366,18 +488,38 @@ const Checkout = () => {
                     {isProcessing ? (
                       <div className="flex items-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Gerando PIX...
+                        Processando PIX...
                       </div>
                     ) : (
                       "Gerar Pix"
                     )}
                   </Button>
                   
-                  {/* Display PIX response if available */}
+                  {/* Display PIX response and QR Code if available */}
                   {cobResp && (
                     <div className={`mt-4 p-4 border ${borderClass} rounded-lg ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-50'}`}>
                       <p className={`text-sm font-medium ${textClass} mb-2`}>PIX gerado com sucesso!</p>
-                      <p className={`text-xs ${mutedTextClass}`}>ID da transação: {cobResp.txid || 'N/A'}</p>
+                      <p className={`text-xs ${mutedTextClass} mb-3`}>ID da transação: {cobResp.data?.txid || 'N/A'}</p>
+                      
+                      {/* QR Code Display */}
+                      {qrCodeDataUrl && (
+                        <div className="text-center">
+                          <p className={`text-sm font-medium ${textClass} mb-2`}>Escaneie o QR Code para pagar:</p>
+                          <img 
+                            src={qrCodeDataUrl} 
+                            alt="QR Code PIX" 
+                            className="mx-auto max-w-48 h-auto"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Additional transaction info */}
+                      {locResp && (
+                        <p className={`text-xs ${mutedTextClass} mt-2`}>Localização: {locResp.data?.id || 'N/A'}</p>
+                      )}
+                      {recResp && (
+                        <p className={`text-xs ${mutedTextClass}`}>Recorrência: {recResp.data?.idRec || 'N/A'}</p>
+                      )}
                     </div>
                   )}
                 </div>

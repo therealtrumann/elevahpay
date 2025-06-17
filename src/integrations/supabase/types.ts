@@ -44,6 +44,62 @@ export type Database = {
           },
         ]
       }
+      pix_transactions: {
+        Row: {
+          cpf: string
+          created_at: string
+          email: string
+          id: string
+          id_rec: string | null
+          loc_id: number | null
+          nome: string
+          product_id: string | null
+          qr_code: string | null
+          status: string | null
+          txid: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          email: string
+          id?: string
+          id_rec?: string | null
+          loc_id?: number | null
+          nome: string
+          product_id?: string | null
+          qr_code?: string | null
+          status?: string | null
+          txid: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          email?: string
+          id?: string
+          id_rec?: string | null
+          loc_id?: number | null
+          nome?: string
+          product_id?: string | null
+          qr_code?: string | null
+          status?: string | null
+          txid?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string | null
