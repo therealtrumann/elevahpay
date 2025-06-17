@@ -21,6 +21,7 @@ const Checkout = () => {
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<string[]>([]);
   const [customerData, setCustomerData] = useState({
     nome: "",
+    email: "",
     cpf: "",
     valor: ""
   });
@@ -45,7 +46,7 @@ const Checkout = () => {
         console.log('Product data fetched:', data);
         setProduct(data);
 
-        // Set the product price as default value
+        // Set the product price as default value (read-only)
         setCustomerData(prev => ({
           ...prev,
           valor: (data.price_cents / 100).toFixed(2)
@@ -79,7 +80,7 @@ const Checkout = () => {
   }, [productId]);
 
   const handleGeneratePix = async () => {
-    if (!customerData.nome || !customerData.cpf || !customerData.valor) {
+    if (!customerData.nome || !customerData.email || !customerData.cpf || !customerData.valor) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -234,7 +235,7 @@ const Checkout = () => {
               </div>
               {product.installments > 1 && (
                 <p className={`text-sm ${mutedTextClass} mt-2`}>
-                  Em até {product.installments}x sem juros
+                  Pagamento mensal
                 </p>
               )}
             </div>
@@ -258,6 +259,17 @@ const Checkout = () => {
               />
             </div>
             <div>
+              <Label htmlFor="email" className={textClass}>E-mail *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={customerData.email}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Digite seu e-mail"
+                className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+              />
+            </div>
+            <div>
               <Label htmlFor="cpf" className={textClass}>CPF *</Label>
               <Input
                 id="cpf"
@@ -273,10 +285,8 @@ const Checkout = () => {
                 id="valor"
                 type="number"
                 value={customerData.valor}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, valor: e.target.value }))}
-                placeholder="0.00"
-                step="0.01"
-                className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+                readOnly
+                className={`${isDarkTheme ? 'bg-gray-600 border-gray-600 text-gray-300 cursor-not-allowed' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
               />
             </div>
           </CardContent>
@@ -312,9 +322,6 @@ const Checkout = () => {
                     <Label htmlFor="card" className={`flex-1 cursor-pointer ${textClass}`}>
                       <div>
                         <p className="font-medium">Cartão de Crédito</p>
-                        <p className={`text-sm ${mutedTextClass}`}>
-                          Parcelamento disponível
-                        </p>
                       </div>
                     </Label>
                   </div>
@@ -372,7 +379,7 @@ const Checkout = () => {
           <CardContent className="p-6">
             <div className={`flex justify-between items-center mb-4 ${textClass}`}>
               <span>Subtotal:</span>
-              <span>R$ {customerData.valor ? parseFloat(customerData.valor).toFixed(2).replace('.', ',') : (product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span>R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className={`flex justify-between items-center mb-4 pb-4 border-b ${borderClass} ${textClass}`}>
               <span>Taxas:</span>
@@ -380,7 +387,7 @@ const Checkout = () => {
             </div>
             <div className={`flex justify-between items-center text-lg font-bold ${textClass}`}>
               <span>Total:</span>
-              <span className="text-green-500">R$ {customerData.valor ? parseFloat(customerData.valor).toFixed(2).replace('.', ',') : (product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span className="text-green-500">R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
           </CardContent>
         </Card>
