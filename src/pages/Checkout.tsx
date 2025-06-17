@@ -25,6 +25,7 @@ const Checkout = () => {
     cpf: "",
     valor: ""
   });
+  const [cobResp, setCobResp] = useState<any>(null);
   const { toast } = useToast();
 
   const isDarkTheme = theme === 'black';
@@ -119,6 +120,9 @@ const Checkout = () => {
 
       const data = await response.json();
       console.log('PIX cobrança criada:', data);
+      
+      // Save the response as cobResp
+      setCobResp(data);
 
       toast({
         title: "PIX gerado com sucesso!",
@@ -197,7 +201,7 @@ const Checkout = () => {
         <Card className={`mb-6 ${cardClass}`}>
           <CardContent className="p-6">
             <div className="text-center mb-4">
-              {product.image_url ? (
+              {product?.image_url ? (
                 <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-full">
                   <img 
                     src={product.image_url} 
@@ -224,16 +228,16 @@ const Checkout = () => {
                 </div>
               )}
               
-              <h1 className={`text-xl font-bold mb-2 ${textClass}`}>{product.name}</h1>
-              {product.description && (
+              <h1 className={`text-xl font-bold mb-2 ${textClass}`}>{product?.name}</h1>
+              {product?.description && (
                 <p className={`text-sm ${mutedTextClass} mb-4`}>
                   {product.description}
                 </p>
               )}
               <div className="text-3xl font-bold text-green-500">
-                R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}
+                R$ {product ? (product.price_cents / 100).toFixed(2).replace('.', ',') : '0,00'}
               </div>
-              {product.installments > 1 && (
+              {product?.installments > 1 && (
                 <p className={`text-sm ${mutedTextClass} mt-2`}>
                   Pagamento mensal
                 </p>
@@ -368,6 +372,14 @@ const Checkout = () => {
                       "Gerar Pix"
                     )}
                   </Button>
+                  
+                  {/* Display PIX response if available */}
+                  {cobResp && (
+                    <div className={`mt-4 p-4 border ${borderClass} rounded-lg ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                      <p className={`text-sm font-medium ${textClass} mb-2`}>PIX gerado com sucesso!</p>
+                      <p className={`text-xs ${mutedTextClass}`}>ID da transação: {cobResp.txid || 'N/A'}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -379,7 +391,7 @@ const Checkout = () => {
           <CardContent className="p-6">
             <div className={`flex justify-between items-center mb-4 ${textClass}`}>
               <span>Subtotal:</span>
-              <span>R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span>R$ {product ? (product.price_cents / 100).toFixed(2).replace('.', ',') : '0,00'}</span>
             </div>
             <div className={`flex justify-between items-center mb-4 pb-4 border-b ${borderClass} ${textClass}`}>
               <span>Taxas:</span>
@@ -387,7 +399,7 @@ const Checkout = () => {
             </div>
             <div className={`flex justify-between items-center text-lg font-bold ${textClass}`}>
               <span>Total:</span>
-              <span className="text-green-500">R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span className="text-green-500">R$ {product ? (product.price_cents / 100).toFixed(2).replace('.', ',') : '0,00'}</span>
             </div>
           </CardContent>
         </Card>
