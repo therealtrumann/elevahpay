@@ -19,6 +19,11 @@ const Checkout = () => {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<string[]>([]);
+  const [customerData, setCustomerData] = useState({
+    nome: "",
+    cpf: "",
+    valor: ""
+  });
   const { toast } = useToast();
 
   const isDarkTheme = theme === 'black';
@@ -39,6 +44,12 @@ const Checkout = () => {
         
         console.log('Product data fetched:', data);
         setProduct(data);
+
+        // Set the product price as default value
+        setCustomerData(prev => ({
+          ...prev,
+          valor: (data.price_cents / 100).toFixed(2)
+        }));
 
         // Determine available payment methods based on product settings
         const methods: string[] = [];
@@ -67,6 +78,63 @@ const Checkout = () => {
     fetchProduct();
   }, [productId]);
 
+  const handleGeneratePix = async () => {
+    if (!customerData.nome || !customerData.cpf || !customerData.valor) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/php/create-cob.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          calendario: {
+            expiracao: 3600
+          },
+          devedor: {
+            cpf: customerData.cpf,
+            nome: customerData.nome
+          },
+          valor: {
+            original: customerData.valor
+          },
+          chave: "978ba0a4-6fac-42f7-8b3d-4cf7a5850f47",
+          solicitacaoPagador: "Cobrança dos serviços contratados."
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao gerar cobrança PIX');
+      }
+
+      const data = await response.json();
+      console.log('PIX cobrança criada:', data);
+
+      toast({
+        title: "PIX gerado com sucesso!",
+        description: "Sua cobrança PIX foi criada.",
+      });
+    } catch (error: any) {
+      console.error('Erro ao gerar PIX:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar a cobrança PIX.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handlePurchase = () => {
     if (!paymentMethod) {
       toast({
@@ -79,7 +147,7 @@ const Checkout = () => {
 
     setIsProcessing(true);
     
-    // Simulate payment processing
+    // Simulate payment processing for card
     setTimeout(() => {
       setIsProcessing(false);
       toast({
@@ -173,6 +241,47 @@ const Checkout = () => {
           </CardContent>
         </Card>
 
+        {/* Customer Data Section */}
+        <Card className={`mb-6 ${cardClass}`}>
+          <CardHeader>
+            <CardTitle className={`text-lg ${textClass}`}>Dados do Cliente</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="nome" className={textClass}>Nome Completo *</Label>
+              <Input
+                id="nome"
+                value={customerData.nome}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, nome: e.target.value }))}
+                placeholder="Digite seu nome completo"
+                className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+              />
+            </div>
+            <div>
+              <Label htmlFor="cpf" className={textClass}>CPF *</Label>
+              <Input
+                id="cpf"
+                value={customerData.cpf}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, cpf: e.target.value }))}
+                placeholder="000.000.000-00"
+                className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+              />
+            </div>
+            <div>
+              <Label htmlFor="valor" className={textClass}>Valor da Cobrança (R$) *</Label>
+              <Input
+                id="valor"
+                type="number"
+                value={customerData.valor}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, valor: e.target.value }))}
+                placeholder="0.00"
+                step="0.01"
+                className={`${isDarkTheme ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400' : ''}`}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Payment Method Section - Only show if there are available methods */}
         {availablePaymentMethods.length > 0 && (
           <Card className={`mb-6 ${cardClass}`}>
@@ -187,7 +296,7 @@ const Checkout = () => {
                     <Smartphone className="h-5 w-5 text-green-500" />
                     <Label htmlFor="pix" className={`flex-1 cursor-pointer ${textClass}`}>
                       <div>
-                        <p className="font-medium">PIX</p>
+                        <p className="font-medium">Pix Automático</p>
                         <p className={`text-sm ${mutedTextClass}`}>
                           Aprovação instantânea
                         </p>
@@ -234,6 +343,26 @@ const Checkout = () => {
                   />
                 </div>
               )}
+
+              {paymentMethod === "pix" && (
+                <div className="mt-4">
+                  <Button 
+                    id="botao_pix"
+                    onClick={handleGeneratePix}
+                    disabled={isProcessing}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
+                  >
+                    {isProcessing ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Gerando PIX...
+                      </div>
+                    ) : (
+                      "Gerar Pix"
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -243,7 +372,7 @@ const Checkout = () => {
           <CardContent className="p-6">
             <div className={`flex justify-between items-center mb-4 ${textClass}`}>
               <span>Subtotal:</span>
-              <span>R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span>R$ {customerData.valor ? parseFloat(customerData.valor).toFixed(2).replace('.', ',') : (product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className={`flex justify-between items-center mb-4 pb-4 border-b ${borderClass} ${textClass}`}>
               <span>Taxas:</span>
@@ -251,13 +380,13 @@ const Checkout = () => {
             </div>
             <div className={`flex justify-between items-center text-lg font-bold ${textClass}`}>
               <span>Total:</span>
-              <span className="text-green-500">R$ {(product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+              <span className="text-green-500">R$ {customerData.valor ? parseFloat(customerData.valor).toFixed(2).replace('.', ',') : (product.price_cents / 100).toFixed(2).replace('.', ',')}</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Purchase Button - Only show if payment methods are available */}
-        {availablePaymentMethods.length > 0 ? (
+        {/* Purchase Button - Only show for card payment */}
+        {availablePaymentMethods.length > 0 && paymentMethod === "card" && (
           <Button 
             onClick={handlePurchase}
             disabled={isProcessing}
@@ -275,7 +404,9 @@ const Checkout = () => {
               </>
             )}
           </Button>
-        ) : (
+        )}
+
+        {availablePaymentMethods.length === 0 && (
           <div className={`text-center p-4 ${textClass}`}>
             <p>Nenhum método de pagamento disponível para este produto.</p>
           </div>
